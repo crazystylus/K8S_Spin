@@ -9,6 +9,7 @@ Install --> Ansible (latest)
             google-chrome (testing virtual hosts)
 
 **Executables like Terraform and Packer are also packed up in the repo to avoid problems**
+<pre>
 ################
 #Repo Structure#
 ################
@@ -93,9 +94,10 @@ Chart && Pipeline Repo@
     ├── Makefile
     ├── README.md
     └── run.sh
-########################################
-            DEPLOYMENT
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+</pre>
+########################################<br>
+            DEPLOYMENT<br>
+@@@@@@@@@@@@@@@@@@@@@@<br>
 
 **The below setups are consdering that the viewer has an existing project**
 **Use Same Zone and Project name and credentials everywhere**
@@ -118,9 +120,9 @@ One needs to first setup a service account with required priviledges for the tas
 3. Create and downlad the JSON key for the service account
 
 
-##############################
-(a) Baking Image using Packer
-##############################
+##############################<br>
+(a) Baking Image using Packer<br>
+##############################<br>
 The files are stored in folder "1. Bake_Image".
 1. Place the service account credentials in the folder
 2. Change the "ProjectName", "Zone", "serviceAccountCredentialsFileName" in the file run.sh
@@ -131,9 +133,9 @@ One can manually check the image in the Google Compute Engine --> Images
 **NOTE** If stuck on issue like compute.zone.get not permitted ...
 Then run in a proper OS with defaut packages, (faced similar problem with Centos-Minimal)
 
-#################################################
-(b) Deploying the infrastructure using Terraform
-#################################################
+#################################################<br>
+(b) Deploying the infrastructure using Terraform<br>
+#################################################<br>
 The files are stored in the folder "2. Deploy_Instances"
 1. Place the Credentials file here
 2. Edit lines 2-5 in main.tf specifying the GCP details and the credentials file name
@@ -149,9 +151,9 @@ The files are stored in the folder "2. Deploy_Instances"
 
 **NOTE** Use n1-standard-1 VMs in cluster to run the EFK Stack else Elasticsearch fails and node may become notReady
 
-##################################################
-(c) Deploying The cluster and stuff
-##################################################
+##################################################<br>
+(c) Deploying The cluster and stuff<br>
+##################################################<br>
 The files are placed in folder "3. Make_Cluster"
 1. Navigate to "3. Make_Cluster/inventory"
 2. Place the credentials file here
@@ -187,9 +189,9 @@ ALSO NOTE THE NODEPORT AT THE END OF PLAYBOOK
 
 Q 1,5,10 have been completed
 
-####################################################
-Q2,3,4,6,11 (Jenkins)(Helm)(Canary/BLueGreen)(Istio)
-####################################################
+####################################################<br>
+Q2,3,4,6,11 (Jenkins)(Helm)(Canary/BLueGreen)(Istio)<br>
+####################################################<br>
 1. Go to the Jenkins IP on port 8080
 2. Use the noted password to unlock Jenkins
 3. Click on "Install suggested plugins" (wait Patiently as it takes time for next page to load)
@@ -231,9 +233,9 @@ The Deployment is by default "BlueGreen"
 20. To edit the html go to "(cloned_repo)/php-redis/index.html" and add 'style="background-color:powderblue;"' to line 9 in bodytag
 21. Commit and push the image. Watch the Jenkins Pipeline, in the DeployApplication Stage, one can refresh page and check for canary
 
-#################################################
-Q 7,8,9 (Monitoring)
-#################################################
+#################################################<br>
+Q 7,8,9 (Monitoring)<br>
+#################################################<br>
 The monitoring automatically get installed under Istio BUT under the namespace istio-system
 So there is no need to install promethus and grafana again, BUT one can do so by running the ansible playbook "efk_deploy.yaml"
 in same folder as other playbooks. This will setup monitoring namespace too. BUT NOT RECOMMENDED TO DO SO
@@ -243,9 +245,9 @@ in same folder as other playbooks. This will setup monitoring namespace too. BUT
 3. Create a dashboard and then click on upload .json and select the "GuestBook-1561564932360.json" from base repo.
 4. One can then view particular guestbook related graph and pod resource consumption
 
-#################################################
-Q 10 (EFK)(Logging)
-#################################################
+#################################################<br>
+Q 10 (EFK)(Logging)<br>
+#################################################<br>
 Use the master's IP and noted port for elastic search and Kibana
 to access the service
 
