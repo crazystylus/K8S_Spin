@@ -1,0 +1,18 @@
+---
+- hosts: [k8s-master*]
+  tasks:
+    - name: Test if Promethus is Installed
+      shell: "kubectl get pods --all-namespace | grep -q promethus-operator"
+      register: prom
+      failed_when: prom.rc != 0
+      ignore_errors: yes
+
+    - name: Install Promethus Operator and Setup Grafana
+      block:
+        - shell: "helm install stable/prometheus-operator --name monitoring --namespace monitoring"
+          register: prom_install
+        - debug:
+            msg: prom_install.stdout
+        - debug:
+            msg: "Grafana Username--> admin  password--> prom-operator"
+      when: prom.rc != 0

@@ -1,0 +1,29 @@
+{
+	"variables": {
+		"zone": "var",
+		"project_id": "var",
+		"account_file": "var"
+	},
+  "builders": [
+    {
+      "type": "googlecompute",
+      "account_file": "{{user `account_file` }}",
+      "project_id": "{{user `project_id` }}",
+      "source_image_family": "centos-7",
+      "image_description": "Base K8S Spinner",
+      "image_name": "kubespinner",
+      "ssh_username": "packer",
+      "zone": "{{user `zone` }}",
+      "machine_type": "g1-small",
+      "disk_size": "10",
+      "disk_type": "pd-standard"
+    }
+  ],
+  "provisioners": [
+	  {
+		  "type": "shell",
+		  "script": "k8s.sh",
+		  "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+	  }
+  ]
+}

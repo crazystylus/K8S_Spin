@@ -1,0 +1,61 @@
+---
+- hosts: [k8s-master*]
+  tasks:
+    - name: Check for Namespace logging existence
+      shell: "kubectl get ns | grep -q logging"
+      register: ns_exists
+      ignore_errors: true
+      failed_when: ns_exists.rc != 0
+    - shell: "kubectl create ns logging"
+      when: ns_exists.rc != 0
+
+    - name: Check if Elastic Search is deployed
+      shell: 'kubectl get pods -n logging | grep -q elastic'
+      ignore_errors: true
+      register: elastic_op
+      failed_when: elastic_op.rc != 0 or ns_exists.rc != 0
+
+    - name: Deploy ElasticSearch and Fluentd
+      block:
+        - copy: 
+            src: files/elasticsearch.yaml
+            dest: /tmp/
+        - shell: "kubectl create -n logging -f /tmp/elasticsearch.yaml"
+      when: elastic_op.rc != 0 or ns_exists.rc != 0
+
+
+    - name: Check if Kibana is deployed
+      shell: 'kubectl get pods -n logging | grep -q kibana'
+      ignore_errors: true
+      register: kibana_op
+      failed_when: kibana_op.rc != 0 or ns_exists.rc != 0
+      
+    - name: Deploy Kibana
+      block:
+        - copy:
+            src: "files/kibana.yaml"
+            dest: "/tmp/"
+        - shell: "kubectl create -n logging -f /tmp/kibana.yaml"
+      when: kibana_op.rc != 0 or ns_exists.rc != 0
+    - name: Check if fluentd is deployed
+      shell: "kubectl get daemonsets -n kube-system | grep fluentd"
+      ignore_errors: true
+      register: fluent_op
+      failed_when: fluent_op.rc != 0 or ns_exists.rc != 0 or elastic_op.rc != 0
+
+    - name: Deploy Fluentd
+      block:
+        - copy:
+            src: files/fluentd-daemonset.yaml
+            dest: /tmp/
+        - copy:
+            src: files/fluentd-rbac.yaml
+            dest: /tmp/
+        - shell: "kubectl apply -f /tmp/fluentd-rbac.yaml"
+        - shell: "kubectl apply -f /tmp/fluentd-daemonset.yaml"
+      when: fluent_op.rc != 0 or ns_exists.rc != 0 or elastic_op.rc != 0
+
+    - shell: "kubectl get svc -n logging"
+      register: elastic_nport
+    - debug:
+        msg: "{{ elastic_nport.stdout }}"

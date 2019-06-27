@@ -1,0 +1,37 @@
+---
+- hosts: [k8s-node*,k8s-master*]
+  tasks:
+          - name: "Purge Trash"
+            shell: "rm -rf /tmp/joinru*"
+
+          - name: "Get Join Command"
+            shell: "kubeadm token create --print-join-command > /tmp/joinrun"
+            when: inventory_hostname is search("k8s-master*")
+
+          - fetch:
+                  src: /tmp/joinrun
+                  dest: /tmp/
+                  flat: yes
+            when: inventory_hostname is search("k8s-master*")
+
+          - copy:
+                  src: /tmp/joinrun
+                  dest: /tmp/joinrun
+            when: inventory_hostname is search("k8s-node*")
+
+          - name: "Join nodes"
+            shell: "modprobe br_netfilter && echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables && echo 1 > /proc/sys/net/ipv4/ip_forward && /bin/bash /tmp/joinrun"
+            when: inventory_hostname is search("k8s-node*")
+          - sysctl:
+                name: net.ipv4.ip_forward
+                value: 1
+                sysctl_set: yes
+                state: present
+                reload: yes
+          - name: "Verify Connect"
+            shell: "kubectl get nodes"
+            when: inventory_hostname is search("k8s-master*")
+            register: kcheck
+
+          - debug: msg="{{ kcheck.stdout }}"
+            when: inventory_hostname is search("k8s-master*")

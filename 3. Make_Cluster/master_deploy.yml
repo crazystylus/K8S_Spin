@@ -1,0 +1,40 @@
+---
+- hosts: k8s-master*
+  tasks:
+      - name: Check if Kubeadm is configured
+        command: "kubectl get pods"
+        register: result
+        failed_when:
+                - result.rc != 0
+        ignore_errors: True
+
+      - name: Configure Master Node
+        block:
+          - sysctl:
+                name: net.ipv4.ip_forward
+                value: 1
+                sysctl_set: yes
+                state: present
+                reload: yes
+          - name: "Kubeadmin PreRequisites"
+            shell: "modprobe br_netfilter && echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables && echo 1 > /proc/sys/net/ipv4/ip_forward"
+
+          - name: "Deploy Kubeadmin"
+            shell: "kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU"
+
+          - name: "Kubectl Setup"
+            shell: "mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config"
+
+          - name: "Install Flannel"
+            shell: "kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml"
+        when: result.rc != 0
+
+        
+
+        
+        
+        
+        
+        
+        
+        

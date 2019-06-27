@@ -1,0 +1,114 @@
+---
+- hosts: [k8s-jenkins,k8s-master*]
+  tasks:
+      - sysctl:
+            name: net.ipv4.ip_forward
+            value: 1
+            sysctl_set: yes
+            state: present
+            reload: yes
+      - name: Get kubeconfig
+        synchronize:
+            src: "$HOME/.kube"
+            dest: "/tmp/"
+            mode: pull
+        when: inventory_hostname is search("k8s-master*")
+      - name: Put kubeconfig for root
+        synchronize:
+            src: "/tmp/.kube"
+            dest: "/root/"
+            mode: push
+        when: inventory_hostname is search("k8s-jenkins")
+
+      - name: Check if Helm is configured
+        command: "helm ls"
+        register: helmop
+        failed_when: helmop.rc != 0
+        ignore_errors: True
+
+      - name: Configure Helm
+        block:
+          - name: Get Helm
+            get_url:
+                url: "https://get.helm.sh/helm-v2.14.1-linux-amd64.tar.gz"
+                dest: /tmp
+          - package:
+                  name: unzip
+                  state: present
+          - unarchive:
+                  src: /tmp/helm-v2.14.1-linux-amd64.tar.gz
+                  dest: /tmp/
+                  remote_src: yes
+          - copy:
+                src: "/tmp/linux-amd64/helm"
+                dest: "/bin/helm"
+                mode: 777
+                remote_src: yes
+          - copy:
+              src: "rbac-config.yaml"
+              dest: "/tmp/rbac-config.yaml"
+          - shell: "kubectl create -f /tmp/rbac-config.yaml"
+            ignore_errors: True
+          - shell: "/bin/helm init --service-account tiller --history-max 200"
+        when: helmop.rc != 0 and inventory_hostname is search("k8s-jenkins")
+
+      - name: Check if Jenkins is installed
+        command: "systemctl start jenkins"
+        register: jenkinsop
+        failed_when: jenkinsop.rc != 0
+        ignore_errors: True
+
+      - name: Install Jenkins
+        block:
+              - name: Install dependencies
+                package:
+                        name: "{{ item }}"
+                        state: present
+                with_items:
+                        - git
+                        - wget
+                        - deltarpm
+                        - java-1.8.0-openjdk
+                        - python2-pyyaml
+
+              - name: Get Repo
+                get_url:
+                        url: "https://pkg.jenkins.io/redhat-stable/jenkins.repo"
+                        dest: "/etc/yum.repos.d/jenkins.repo"
+
+              - name: Add GPG Key
+                rpm_key:
+                        key: "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+                        state: present
+
+              - name: Install Jenkins
+                package:
+                       name: "jenkins"
+                       state: "present"
+              - name: Put kubeconfig for jenkins
+                synchronize:
+                       src: "/tmp/.kube"
+                       dest: "/var/lib/jenkins/"
+                       mode: push
+              - name: Jenkins Docker Permit
+                command: "usermod -aG docker jenkins"
+              - name: Own kubeconfig
+                command: "chown -R jenkins /var/lib/jenkins/.kube"
+
+              - name: Start Service
+                service:
+                        name: jenkins
+                        state: started
+        when: jenkinsop.rc != 0 and inventory_hostname is search("k8s-jenkins")
+
+      - name: Get Jenkins Passwd
+        block:
+              - name: Wait for Admin Passwd
+                wait_for:
+                        path: /var/lib/jenkins/secrets/initialAdminPassword
+                        state: present
+              - command: cat /var/lib/jenkins/secrets/initialAdminPassword
+                register: adminpass
+              - debug: 
+                  msg: "{{ adminpass.stdout }}"
+        when: inventory_hostname is search("k8s-jenkins")

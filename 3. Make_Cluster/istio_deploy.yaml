@@ -1,0 +1,21 @@
+---
+- hosts: [k8s-master*,k8s-jenkins]
+  tasks:
+    #- name: Copy Istioctl
+    #  copy:
+    #    src: files/istioctl
+    #    dest: /bin/
+    #    mode: 777
+    - name: Installing istio on k8s cluster
+      block:
+        - copy:
+            src: files/istio-demo.yaml
+            dest: /tmp/
+        - shell: "kubectl apply -f /tmp/istio-demo.yaml"
+        - shell: kubectl patch svc grafana -n istio-system --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
+        - shell: kubectl patch svc prometheus -n istio-system --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"}]'
+        - shell: 'kubectl get svc -n istio-system | grep -E "grafana|prometheus"'
+          register: nports
+        - debug: msg="Check the Promethus and Grafana Ports \n\n {{ nports.stdout }}"
+      when: inventory_hostname is search("k8s-master*")
+      tags: ["istio"]

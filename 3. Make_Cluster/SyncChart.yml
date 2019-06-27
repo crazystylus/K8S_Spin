@@ -1,0 +1,9 @@
+---
+- hosts: [k8s-jenkins]
+  gather_facts: no
+  tasks:
+      - name: Put Chart
+        synchronize:
+            src: "guest-book"
+            dest: "/root"
+            mode: push
